@@ -1,3 +1,9 @@
+import sys
+import os
+
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
+from nlp.complaint_processor import process_complaint
 # CivicPulse - Risk Engine
 # Member 1: AI/ML
 #
@@ -294,22 +300,68 @@ def analyze_risk(
         "explanation": explanations,
         "emerging_problem": emerging_problem
     }
+# ============================================================
+# 8. NLP + RISK ENGINE INTEGRATION
+# ============================================================
 
+def analyze_complaint_with_risk(
+    complaint,
+    location,
+    complaint_count,
+    complaint_growth,
+    spatial_density,
+    historical_recurrence,
+    weather_impact,
+    traffic_impact
+):
+    """
+    Connect NLP complaint processing with Risk Engine.
+    """
+
+    # Process complaint using NLP
+    nlp_result = process_complaint(complaint)
+
+    # Run risk analysis
+    risk_result = analyze_risk(
+        category=nlp_result["category"],
+        location=location,
+        complaint_count=complaint_count,
+        complaint_growth=complaint_growth,
+        spatial_density=spatial_density,
+        historical_recurrence=historical_recurrence,
+        weather_impact=weather_impact,
+        traffic_impact=traffic_impact
+    )
+
+    # Combine NLP + Risk results
+    return {
+        "complaint": complaint,
+
+        "nlp": nlp_result,
+
+        "risk": risk_result
+    }
 
 # ============================================================
-# 7. TEST
+# 9. INTEGRATION TEST
 # ============================================================
 
 if __name__ == "__main__":
 
-    # Sample data for testing.
-    # Later this data will come from the backend/database.
+    complaint = (
+        "Water has been accumulating near the metro station "
+        "for two days."
+    )
 
-    result = analyze_risk(
-        category="waterlogging",
+    result = analyze_complaint_with_risk(
+        complaint=complaint,
         location="Sector 18",
+
+        # Complaint data
         complaint_count=31,
         complaint_growth=73,
+
+        # Area/context data
         spatial_density=80,
         historical_recurrence=70,
         weather_impact=90,
@@ -318,29 +370,33 @@ if __name__ == "__main__":
 
     print("\n================================")
     print("       CIVICPULSE AI")
-    print("       RISK ANALYSIS")
+    print("   NLP + RISK ENGINE")
     print("================================")
 
-    print("\nCategory:")
-    print(result["category"])
+    print("\nComplaint:")
+    print(result["complaint"])
 
-    print("\nLocation:")
-    print(result["location"])
+    print("\nNLP Output:")
+    print("Category:", result["nlp"]["category"])
+    print("Severity:", result["nlp"]["severity"])
+    print("Duration:", result["nlp"]["duration"])
 
-    print("\nRisk Score:")
-    print(f'{result["risk_score"]}/100')
-
-    print("\nRisk Level:")
-    print(result["risk_level"])
+    print("\nRisk Analysis:")
+    print("Location:", result["risk"]["location"])
+    print("Risk Score:", f'{result["risk"]["risk_score"]}/100')
+    print("Risk Level:", result["risk"]["risk_level"])
 
     print("\nWhy?")
-    for factor in result["explanation"]:
+    for factor in result["risk"]["explanation"]:
         print("-", factor)
 
     print("\nEmerging Problem:")
-    emerging = result["emerging_problem"]
+
+    emerging = result["risk"]["emerging_problem"]
 
     print("Detected:", emerging["emerging_problem"])
+    print("Category:", emerging["category"])
+    print("Location:", emerging["location"])
     print("Message:", emerging["message"])
 
     if emerging["emerging_problem"]:
