@@ -1,40 +1,80 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
+from sqlalchemy.orm import Session
+
+from database import SessionLocal
+from models.complaint import Complaint
 from schemas.complaint import ComplaintCreate
-from services.complaint_service import analyze_complaint
 
 router = APIRouter()
 
-complaints = []
+
+def get_db():
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
 
 
 @router.post("/complaints")
-def create_complaint(complaint: ComplaintCreate):
-    analysis = analyze_complaint(complaint.description)
+def create_complaint(
+    complaint: ComplaintCreate,
+    db: Session = Depends(get_db)
+):
+    new_complaint = Complaint(
+        description=complaint.description,
+        latitude=complaint.latitude,
+        longitude=complaint.longitude
+    )
 
-    complaints.append({
-        "description": complaint.description,
-        "latitude": complaint.latitude,
-        "longitude": complaint.longitude,
-        "analysis": analysis
-    })
+    db.add(new_complaint)
+    db.commit()
+    db.refresh(new_complaint)
 
     return {
         "message": "Complaint received successfully",
-        "complaint": complaints[-1]
+        "complaint": {
+            "id": new_complaint.id,
+            "description": new_complaint.description,
+            "latitude": new_complaint.latitude,
+            "longitude": new_complaint.longitude
+        }
     }
 
 
 @router.get("/complaints")
-def get_complaints():
+def get_complaints(db: Session = Depends(get_db)):
+    complaints = db.query(Complaint).all()
+
     return {
         "count": len(complaints),
-        "complaints": complaints
+        "complaints": [
+            {
+                "id": complaint.id,
+                "description": complaint.description,
+                "latitude": complaint.latitude,
+                "longitude": complaint.longitude
+            }
+            for complaint in complaints
+        ]
     }
 
 
 @router.get("/complaints/{complaint_id}")
-def get_complaint(complaint_id: int):
-    if complaint_id < 0 or complaint_id >= len(complaints):
+def get_complaint(
+    complaint_id: int,
+    db: Session = Depends(get_db)
+):
+    complaint = db.query(Complaint).filter(
+        Complaint.id == complaint_id
+    ).first()
+
+    if not complaint:
         return {"error": "Complaint not found"}
 
-    return complaints[complaint_id]
+    return {
+        "id": complaint.id,
+        "description": complaint.description,
+        "latitude": complaint.latitude,
+        "longitude": complaint.longitude
+    }
